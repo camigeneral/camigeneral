@@ -1,0 +1,36 @@
+name: Generate Terminal GIF
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt install -y ffmpeg
+          python -m pip install --upgrade pip
+          pip install git+https://github.com/camigeneral/github-readme-terminal.git@main
+
+      - name: Run script
+        run: python main.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIFOS_GENERAL_FPS: 15
+          GIFOS_GENERAL_LOOP_COUNT: 4
+
+      - name: Commit and push
+        run: |
+          git add README.md output.gif
+          git -c "user.name=bot" -c "user.email=bot@github.com" commit --amend --no-edit --reset-author -m "Automatically updated on $(TZ='America/Argentina/Buenos_Aires' date)" 2>/dev/null || git -c "user.name=bot" -c "user.email=bot@github.com" commit -m "Automatically updated on $(TZ='America/Argentina/Buenos_Aires' date)"
+          git push --force-with-lease
